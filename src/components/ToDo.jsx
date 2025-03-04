@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useReducer, useRef } from "react";
+import { useState, useEffect, useMemo, useReducer, useRef, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const todoReducer = (state, action) => {
@@ -11,6 +11,8 @@ const todoReducer = (state, action) => {
       );
     case "DELETE_TODO":
       return state.filter(todo => todo.id !== action.id);
+    case "LOAD_TODOS":
+      return action.todos || [];
     default:
       return state;
   }
@@ -22,40 +24,34 @@ const TodoApp = () => {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const storedTodos = JSON.parse(localStorage.getItem("todos"));
-    if (storedTodos) {
-      dispatch({ type: "LOAD_TODOS", todos: storedTodos });
-    }
+    const storedTodos = JSON.parse(localStorage.getItem("todos")) || [];
+    dispatch({ type: "LOAD_TODOS", todos: storedTodos });
   }, []);
 
   useEffect(() => {
-    if (todos.length > 0) {
-      localStorage.setItem("todos", JSON.stringify(todos));
-    }
+    localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
-  const filteredTodos = useMemo(() => {
-    return {
-      completed: todos.filter(todo => todo.completed),
-      incomplete: todos.filter(todo => !todo.completed),
-    };
-  }, [todos]);
+  const filteredTodos = useMemo(() => ({
+    completed: todos.filter(todo => todo.completed),
+    incomplete: todos.filter(todo => !todo.completed),
+  }), [todos]);
 
-  const handleAddTodo = () => {
+  const handleAddTodo = useCallback(() => {
     if (input.trim() !== "") {
       dispatch({ type: "ADD_TODO", text: input });
-      setInput(""); 
-      inputRef.current.focus(); 
+      setInput("");
+      inputRef.current.focus();
     }
-  };
+  }, [input]);
 
-  const handleDeleteTodo = (id) => {
+  const handleDeleteTodo = useCallback((id) => {
     dispatch({ type: "DELETE_TODO", id });
-  };
+  }, []);
 
-  const handleToggleTodo = (id) => {
+  const handleToggleTodo = useCallback((id) => {
     dispatch({ type: "TOGGLE_TODO", id });
-  };
+  }, []);
 
   return (
     <div className="container d-grid p-3 border border-1 border-secondary bg-light rounded-3">
@@ -69,7 +65,9 @@ const TodoApp = () => {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Thêm công việc mới"
         />
-        <button className="p-2 ps-3 pe-3 bg-success rounded-3 text-light" onClick={handleAddTodo}>Thêm công việc</button>
+        <button className="p-2 ps-3 pe-3 bg-success rounded-3 text-light" onClick={handleAddTodo}>
+          Thêm công việc
+        </button>
       </div>
 
       <h3>Danh sách công việc</h3>
